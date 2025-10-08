@@ -1,0 +1,7 @@
+{
+  "admin_username": "admin",
+  "admin_password_hash": "scrypt:32768:8:1$0jK5C2f8Cri42NxX$9198a496aef976d462a2a700dd82256a0c77701840a9a1f951271d01b935285eb4a812b96998c32187a08cb90ac315f67ef9d5b6e3a915d0bd7cbfbbfc1b8562",
+  "inet_username": "jporcelli",
+  "inet_password": "********",
+  "update_frequency": 1
+}

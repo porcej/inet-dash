@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  inet-dashboard:
+    build: .
+    container_name: inet-dashboard
+    ports:
+      - "${FLASK_PORT:-5000}:5000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - FLASK_HOST=0.0.0.0
+      - FLASK_PORT=5000
+    volumes:
+      # Mount config.json and cookies for persistence
+      - ./config.json:/app/config.json
+      - ./inet_cookies.pkl:/app/inet_cookies.pkl
+      # Optional: mount for live code updates in development
+      # - ./app.py:/app/app.py
+      # - ./templates:/app/templates
+      # - ./static:/app/static
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - inet-network
+
+networks:
+  inet-network:
+    driver: bridge
+

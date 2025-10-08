@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - INET Dashboard</title>
+    
+    <!-- Bootstrap 5.3 (dark theme) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-dark bg-dark border-bottom">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-gear"></i> Admin Panel
+            </span>
+            <div class="d-flex">
+                <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm me-2">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <div class="card bg-dark border-secondary">
+                    <div class="card-header bg-secondary">
+                        <h5 class="mb-0"><i class="bi bi-sliders"></i> Configuration Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('admin') }}">
+                            <!-- Admin Credentials Section -->
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="bi bi-shield-lock"></i> Admin Credentials
+                            </h6>
+                            
+                            <div class="mb-3">
+                                <label for="admin_password" class="form-label">
+                                    New Admin Password
+                                    <small class="text-muted">(leave blank to keep current)</small>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-key"></i></span>
+                                    <input type="password" class="form-control" id="admin_password" name="admin_password" 
+                                           placeholder="Enter new password">
+                                </div>
+                                <div class="form-text">Change the admin panel login password</div>
+                            </div>
+
+                            <!-- INET Credentials Section -->
+                            <h6 class="border-bottom pb-2 mb-3 mt-4">
+                                <i class="bi bi-key-fill"></i> INET Account Credentials
+                            </h6>
+                            
+                            <div class="mb-3">
+                                <label for="inet_username" class="form-label">INET Username</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                    <input type="text" class="form-control" id="inet_username" name="inet_username" 
+                                           value="{{ config.inet_username }}" required>
+                                </div>
+                                <div class="form-text">Your INET account username</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="inet_password" class="form-label">INET Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                    <input type="password" class="form-control" id="inet_password" name="inet_password" 
+                                           value="{{ config.inet_password }}" required>
+                                </div>
+                                <div class="form-text">Your INET account password</div>
+                            </div>
+
+                            <!-- Update Frequency Section -->
+                            <h6 class="border-bottom pb-2 mb-3 mt-4">
+                                <i class="bi bi-clock"></i> Update Settings
+                            </h6>
+                            
+                            <div class="mb-3">
+                                <label for="update_frequency" class="form-label">
+                                    Update Frequency (minutes)
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-arrow-repeat"></i></span>
+                                    <input type="number" class="form-control" id="update_frequency" name="update_frequency" 
+                                           value="{{ config.update_frequency }}" min="1" max="1440" required>
+                                    <span class="input-group-text">minutes</span>
+                                </div>
+                                <div class="form-text">
+                                    How often to automatically scrape equipment data (1-1440 minutes)
+                                </div>
+                            </div>
+
+                            <!-- Submit Buttons -->
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                                <button type="button" class="btn btn-info" id="test-connection">
+                                    <i class="bi bi-wifi"></i> Test Connection
+                                </button>
+                                <button type="button" class="btn btn-warning" id="refresh-now">
+                                    <i class="bi bi-arrow-clockwise"></i> Refresh Now
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-save"></i> Save Configuration
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- System Status -->
+                <div class="card bg-dark border-secondary mt-4">
+                    <div class="card-header bg-secondary">
+                        <h5 class="mb-0"><i class="bi bi-info-circle"></i> System Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Scraper Status:</strong> <span class="badge bg-success">Active</span></p>
+                                <p><strong>Current Update Interval:</strong> {{ config.update_frequency }} minutes</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>INET Account:</strong> {{ config.inet_username or 'Not configured' }}</p>
+                                <p><strong>Password Set:</strong> 
+                                    {% if config.inet_password %}
+                                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Yes</span>
+                                    {% else %}
+                                        <span class="badge bg-danger"><i class="bi bi-x-circle"></i> No</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Admin Panel JS -->
+    <script>
+        // Refresh Now button
+        document.getElementById('refresh-now').addEventListener('click', function() {
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Refreshing...';
+            
+            fetch('/api/refresh', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    alert('Data refresh started! Check the dashboard for updates.');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Refresh Now';
+                })
+                .catch(error => {
+                    alert('Error triggering refresh: ' + error);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Refresh Now';
+                });
+        });
+
+        // Test Connection button
+        document.getElementById('test-connection').addEventListener('click', function() {
+            alert('Connection test feature coming soon!');
+        });
+    </script>
+</body>
+</html>
+

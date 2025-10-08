@@ -1,0 +1,288 @@
+/* INET Dashboard - Dark Theme Custom Styles */
+
+:root {
+    --bs-body-bg: #121212;
+    --bs-body-color: #e0e0e0;
+    --bs-dark: #1e1e1e;
+    --bs-secondary: #2d2d2d;
+}
+
+body {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Make the main container fill remaining space */
+.container-fluid.mt-3 {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Make rows fill the container height */
+.container-fluid.mt-3 > .row {
+    flex: 1;
+}
+
+/* Make columns stretch to full height */
+.container-fluid.mt-3 > .row > .col-md-3,
+.container-fluid.mt-3 > .row > .col-md-9 {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Docking stations column - distribute cards equally */
+#docking-stations-container {
+    gap: 0.5rem;
+}
+
+#docking-stations-container .docking-station-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Important for flexbox scrolling */
+}
+
+/* Brighter green for checkmarks in dark backgrounds */
+.docking-station-card .card-header .text-success {
+    color: #28ff00 !important;
+    filter: drop-shadow(0 0 2px rgba(40, 255, 0, 0.5));
+}
+
+#docking-stations-container .docking-station-card .card-body {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Make cards inside instruments column fill available height */
+.container-fluid.mt-3 > .row > .col-md-9 > .card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Make card bodies scrollable and fill space */
+.container-fluid.mt-3 > .row > .col-md-9 .card-body {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Card styling */
+.card {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Table styling */
+.table-dark {
+    --bs-table-bg: #1e1e1e;
+    --bs-table-striped-bg: #252525;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #2a2a2a !important;
+}
+
+/* Calibration status row highlighting */
+.table-warning {
+    background-color: #664d03 !important;
+    color: #ffecb5 !important;
+}
+
+.table-warning:hover {
+    background-color: #7a5c04 !important;
+}
+
+.table-danger {
+    background-color: #58151c !important;
+    color: #f1aeb5 !important;
+}
+
+.table-danger:hover {
+    background-color: #6a1a22 !important;
+}
+
+/* Sidebar styling */
+.list-group-item-dark {
+    background-color: #1e1e1e;
+    border-color: #2d2d2d;
+}
+
+.list-group-item-dark:hover {
+    background-color: #252525;
+}
+
+/* Connection status badge */
+#connection-status {
+    min-width: 120px;
+    padding: 0.5rem 0.75rem;
+}
+
+#connection-status.connected {
+    background-color: #198754;
+}
+
+#connection-status.disconnected {
+    background-color: #dc3545;
+}
+
+#connection-status.connecting {
+    background-color: #ffc107;
+    color: #000;
+}
+
+/* Navbar */
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Alert animations */
+@keyframes slideIn {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.alert {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* Scrollable lists - now handled by flex layout */
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Badge styling */
+.badge {
+    font-size: 0.85em;
+    padding: 0.4em 0.6em;
+}
+
+/* Responsive table - now handled by flex layout */
+
+/* Sticky table header */
+.table-responsive thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* Loading spinner overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+/* Pulse animation for live updates */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.updating {
+    animation: pulse 1s infinite;
+}
+
+/* Form controls dark theme enhancement */
+.form-control:focus,
+.form-select:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 0.25rem rgba(74, 144, 226, 0.25);
+}
+
+/* Login page centering */
+.login-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Icon spacing */
+i.bi {
+    margin-right: 0.25rem;
+}
+
+/* Button enhancements */
+.btn {
+    transition: all 0.2s ease-in-out;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Status indicators */
+.status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+.status-indicator.ok {
+    background-color: #198754;
+}
+
+.status-indicator.warning {
+    background-color: #ffc107;
+}
+
+.status-indicator.danger {
+    background-color: #dc3545;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .navbar-brand {
+        font-size: 1rem;
+    }
+    
+    /* On mobile, columns stack so flex layout still works */
+    .container-fluid.mt-3 > .row > .col-md-3,
+    .container-fluid.mt-3 > .row > .col-md-9 {
+        max-height: 50vh;
+    }
+}
+
