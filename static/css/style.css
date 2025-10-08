@@ -52,6 +52,23 @@ body {
     filter: drop-shadow(0 0 2px rgba(40, 255, 0, 0.5));
 }
 
+/* Gas inlets list styling */
+.docking-station-card .list-unstyled li {
+    padding-left: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+/* Docked instrument info - make it prominent */
+.docked-instrument-info strong {
+    font-weight: 700;
+}
+
+.docked-instrument-info .text-info {
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px;
+}
+
 #docking-stations-container .docking-station-card .card-body {
     flex: 1;
     overflow-y: auto;

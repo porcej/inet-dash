@@ -66,85 +66,91 @@
                                     {% if station.get('Equipment Number') %}
                                     <p class="mb-1 small text-muted">Equip #: {{ station.get('Equipment Number') }}</p>
                                     {% endif %}
+                                    <strong class="d-block mb-1">{{ station.get('Last Known State') or 'Idle' }}</strong>
                                     {% if station.get('Serial Number') %}
                                     <small class="text-muted d-block">SN: {{ station.get('Serial Number') }}</small>
                                     {% endif %}
                                     {% if station.get('Instrument Currently Docked') %}
-                                    <div class="mt-2 mb-2">
-                                        <small class="text-muted d-block">Docked:</small>
+                                    <div class="mt-2 mb-2 docked-instrument-info">
+                                        <small class="text-muted d-block mb-1">Docked:</small>
                                         {% if station._docked_unit %}
-                                        <strong class="text-info">{{ station._docked_unit }}</strong>
-                                        <small class="text-muted d-block" style="font-size: 0.75rem;">SN: {{ station.get('Instrument Currently Docked') }}</small>
+                                        <strong class="text-info d-block" style="font-size: 1.1rem;">{{ station._docked_unit }}</strong>
+                                        <strong class="text-muted d-block" style="font-size: 0.9rem;">SN: {{ station.get('Instrument Currently Docked') }}</strong>
                                         {% else %}
-                                        <small class="text-warning">{{ station.get('Instrument Currently Docked') }}</small>
+                                        <strong class="text-warning">{{ station.get('Instrument Currently Docked') }}</strong>
                                         {% endif %}
                                     </div>
                                     {% endif %}
-                                    {% if station.get('Gas Inlet 1') %}
-                                    <small class="text-muted d-block">
-                                        Gas Inlet 1: {{ station.get('Gas Inlet 1') }}
-                                        {% if station.get('Gas Inlet 1 Pressure', '').lower() == 'full' %}
-                                        <i class="bi bi-check-circle-fill text-success ms-1"></i>
-                                        {% elif station.get('Gas Inlet 1 Pressure') %}
-                                        <i class="bi bi-exclamation-circle-fill text-warning ms-1"></i>
-                                        <span class="text-warning">{{ station.get('Gas Inlet 1 Pressure') }}</span>
+                                    {% set has_gas_inlets = station.get('Gas Inlet 1') or station.get('Gas Inlet 2') or station.get('Gas Inlet 3') or station.get('Gas Inlet 4') or station.get('Gas Inlet 5') or station.get('Gas Inlet 6') %}
+                                    {% if has_gas_inlets %}
+                                    <ul class="list-unstyled mt-2 mb-0 small">
+                                        {% if station.get('Gas Inlet 1') %}
+                                        <li class="text-muted">
+                                            Gas Inlet 1: {{ station.get('Gas Inlet 1') }}
+                                            {% if station.get('Gas Inlet 1 Pressure', '').lower() == 'full' %}
+                                            <i class="bi bi-check-circle-fill text-success ms-1"></i>
+                                            {% elif station.get('Gas Inlet 1 Pressure') %}
+                                            <i class="bi bi-exclamation-circle-fill text-warning ms-1"></i>
+                                            <span class="text-warning">{{ station.get('Gas Inlet 1 Pressure') }}</span>
+                                            {% endif %}
+                                        </li>
                                         {% endif %}
-                                    </small>
-                                    {% endif %}
-                                    {% if station.get('Gas Inlet 2') %}
-                                    <small class="text-muted d-block">
-                                        Gas Inlet 2: {{ station.get('Gas Inlet 2') }}
-                                        {% if station.get('Gas Inlet 2 Pressure', '').lower() == 'full' %}
-                                        <i class="bi bi-check-circle-fill text-success ms-1"></i>
-                                        {% elif station.get('Gas Inlet 2 Pressure') %}
-                                        <i class="bi bi-exclamation-circle-fill text-warning ms-1"></i>
-                                        <span class="text-warning">{{ station.get('Gas Inlet 2 Pressure') }}</span>
+                                        {% if station.get('Gas Inlet 2') %}
+                                        <li class="text-muted">
+                                            Gas Inlet 2: {{ station.get('Gas Inlet 2') }}
+                                            {% if station.get('Gas Inlet 2 Pressure', '').lower() == 'full' %}
+                                            <i class="bi bi-check-circle-fill text-success ms-1"></i>
+                                            {% elif station.get('Gas Inlet 2 Pressure') %}
+                                            <i class="bi bi-exclamation-circle-fill text-warning ms-1"></i>
+                                            <span class="text-warning">{{ station.get('Gas Inlet 2 Pressure') }}</span>
+                                            {% endif %}
+                                        </li>
                                         {% endif %}
-                                    </small>
-                                    {% endif %}
-                                    {% if station.get('Gas Inlet 3') %}
-                                    <small class="text-muted d-block">
-                                        Gas Inlet 3: {{ station.get('Gas Inlet 3') }}
-                                        {% if station.get('Gas Inlet 3 Pressure', '').lower() == 'full' %}
-                                        <i class="bi bi-check-circle-fill text-success ms-1"></i>
-                                        {% elif station.get('Gas Inlet 3 Pressure') %}
-                                        <i class="bi bi-exclamation-circle-fill text-warning ms-1"></i>
-                                        <span class="text-warning">{{ station.get('Gas Inlet 3 Pressure') }}</span>
+                                        {% if station.get('Gas Inlet 3') %}
+                                        <li class="text-muted">
+                                            Gas Inlet 3: {{ station.get('Gas Inlet 3') }}
+                                            {% if station.get('Gas Inlet 3 Pressure', '').lower() == 'full' %}
+                                            <i class="bi bi-check-circle-fill text-success ms-1"></i>
+                                            {% elif station.get('Gas Inlet 3 Pressure') %}
+                                            <i class="bi bi-exclamation-circle-fill text-warning ms-1"></i>
+                                            <span class="text-warning">{{ station.get('Gas Inlet 3 Pressure') }}</span>
+                                            {% endif %}
+                                        </li>
                                         {% endif %}
-                                    </small>
-                                    {% endif %}
-                                    {% if station.get('Gas Inlet 4') %}
-                                    <small class="text-muted d-block">
-                                        Gas Inlet 4: {{ station.get('Gas Inlet 4') }}
-                                        {% if station.get('Gas Inlet 4 Pressure', '').lower() == 'full' %}
-                                        <i class="bi bi-check-circle-fill text-success ms-1"></i>
-                                        {% elif station.get('Gas Inlet 4 Pressure') %}
-                                        <i class="bi bi-exclamation-circle-fill text-warning ms-1"></i>
-                                        <span class="text-warning">{{ station.get('Gas Inlet 4 Pressure') }}</span>
+                                        {% if station.get('Gas Inlet 4') %}
+                                        <li class="text-muted">
+                                            Gas Inlet 4: {{ station.get('Gas Inlet 4') }}
+                                            {% if station.get('Gas Inlet 4 Pressure', '').lower() == 'full' %}
+                                            <i class="bi bi-check-circle-fill text-success ms-1"></i>
+                                            {% elif station.get('Gas Inlet 4 Pressure') %}
+                                            <i class="bi bi-exclamation-circle-fill text-warning ms-1"></i>
+                                            <span class="text-warning">{{ station.get('Gas Inlet 4 Pressure') }}</span>
+                                            {% endif %}
+                                        </li>
                                         {% endif %}
-                                    </small>
-                                    {% endif %}
-                                    {% if station.get('Gas Inlet 5') %}
-                                    <small class="text-muted d-block">
-                                        Gas Inlet 5: {{ station.get('Gas Inlet 5') }}
-                                        {% if station.get('Gas Inlet 5 Pressure', '').lower() == 'full' %}
-                                        <i class="bi bi-check-circle-fill text-success ms-1"></i>
-                                        {% elif station.get('Gas Inlet 5 Pressure') %}
-                                        <i class="bi bi-exclamation-circle-fill text-warning ms-1"></i>
-                                        <span class="text-warning">{{ station.get('Gas Inlet 5 Pressure') }}</span>
+                                        {% if station.get('Gas Inlet 5') %}
+                                        <li class="text-muted">
+                                            Gas Inlet 5: {{ station.get('Gas Inlet 5') }}
+                                            {% if station.get('Gas Inlet 5 Pressure', '').lower() == 'full' %}
+                                            <i class="bi bi-check-circle-fill text-success ms-1"></i>
+                                            {% elif station.get('Gas Inlet 5 Pressure') %}
+                                            <i class="bi bi-exclamation-circle-fill text-warning ms-1"></i>
+                                            <span class="text-warning">{{ station.get('Gas Inlet 5 Pressure') }}</span>
+                                            {% endif %}
+                                        </li>
                                         {% endif %}
-                                    </small>
-                                    {% endif %}
-                                    {% if station.get('Gas Inlet 6') %}
-                                    <small class="text-muted d-block">
-                                        Gas Inlet 6: {{ station.get('Gas Inlet 6') }}
-                                        {% if station.get('Gas Inlet 6 Pressure', '').lower() == 'full' %}
-                                        <i class="bi bi-check-circle-fill text-success ms-1"></i>
-                                        {% elif station.get('Gas Inlet 6 Pressure') %}
-                                        <i class="bi bi-exclamation-circle-fill text-warning ms-1"></i>
-                                        <span class="text-warning">{{ station.get('Gas Inlet 6 Pressure') }}</span>
+                                        {% if station.get('Gas Inlet 6') %}
+                                        <li class="text-muted">
+                                            Gas Inlet 6: {{ station.get('Gas Inlet 6') }}
+                                            {% if station.get('Gas Inlet 6 Pressure', '').lower() == 'full' %}
+                                            <i class="bi bi-check-circle-fill text-success ms-1"></i>
+                                            {% elif station.get('Gas Inlet 6 Pressure') %}
+                                            <i class="bi bi-exclamation-circle-fill text-warning ms-1"></i>
+                                            <span class="text-warning">{{ station.get('Gas Inlet 6 Pressure') }}</span>
+                                            {% endif %}
+                                        </li>
                                         {% endif %}
-                                    </small>
+                                    </ul>
                                     {% endif %}
                     </div>
                 </div>

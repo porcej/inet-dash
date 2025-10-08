@@ -149,7 +149,7 @@ function updateDockingStationsList(dockingStations) {
             statusIndicator = `<i class="bi bi-exclamation-circle-fill text-warning ms-1"></i><small class="text-warning ms-1">${escapeHtml(gasStatus)}</small>`;
         }
         
-        // Helper function to generate gas inlet HTML
+        // Helper function to generate gas inlet list item HTML
         const generateGasInletHtml = (inletNumber) => {
             const inletKey = `Gas Inlet ${inletNumber}`;
             const pressureKey = `Gas Inlet ${inletNumber} Pressure`;
@@ -168,14 +168,16 @@ function updateDockingStationsList(dockingStations) {
                 pressureIndicator = `<i class="bi bi-exclamation-circle-fill text-warning ms-1"></i><span class="text-warning"> ${escapeHtml(inletPressure)}</span>`;
             }
             
-            return `<small class="text-muted d-block">Gas Inlet ${inletNumber}: ${escapeHtml(station[inletKey])} ${pressureIndicator}</small>`;
+            return `<li class="text-muted">Gas Inlet ${inletNumber}: ${escapeHtml(station[inletKey])} ${pressureIndicator}</li>`;
         };
         
-        // Generate HTML for all gas inlets (1-6)
-        const gasInletsHtml = [1, 2, 3, 4, 5, 6]
+        // Generate HTML for all gas inlets (1-6) as a list
+        const gasInletItems = [1, 2, 3, 4, 5, 6]
             .map(num => generateGasInletHtml(num))
             .filter(html => html !== '')
             .join('');
+        
+        const gasInletsHtml = gasInletItems ? `<ul class="list-unstyled mt-2 mb-0 small">${gasInletItems}</ul>` : '';
         
         // Generate docked instrument HTML
         let dockedInstrumentHtml = '';
@@ -185,17 +187,17 @@ function updateDockingStationsList(dockingStations) {
             
             if (dockedUnit) {
                 dockedInstrumentHtml = `
-                    <div class="mt-2 mb-2">
-                        <small class="text-muted d-block">Docked:</small>
-                        <strong class="text-info">${escapeHtml(dockedUnit)}</strong>
-                        <small class="text-muted d-block" style="font-size: 0.75rem;">SN: ${escapeHtml(dockedSerial)}</small>
+                    <div class="mt-2 mb-2 docked-instrument-info">
+                        <small class="text-muted d-block mb-1">Docked:</small>
+                        <strong class="text-info d-block" style="font-size: 1.1rem;">${escapeHtml(dockedUnit)}</strong>
+                        <strong class="text-muted d-block" style="font-size: 0.9rem;">SN: ${escapeHtml(dockedSerial)}</strong>
                     </div>
                 `;
             } else {
                 dockedInstrumentHtml = `
-                    <div class="mt-2 mb-2">
-                        <small class="text-muted d-block">Docked:</small>
-                        <small class="text-warning">${escapeHtml(dockedSerial)}</small>
+                    <div class="mt-2 mb-2 docked-instrument-info">
+                        <small class="text-muted d-block mb-1">Docked:</small>
+                        <strong class="text-warning">${escapeHtml(dockedSerial)}</strong>
                     </div>
                 `;
             }
@@ -211,6 +213,7 @@ function updateDockingStationsList(dockingStations) {
                 </div>
                 <div class="card-body p-3">
                     ${station['Equipment Number'] ? `<p class="mb-1 small text-muted">Equip #: ${escapeHtml(station['Equipment Number'])}</p>` : ''}
+                    <strong class="d-block mb-1">${escapeHtml(station['Last Known State'] || 'Idle')}</strong>
                     ${station['Serial Number'] ? `<small class="text-muted d-block">SN: ${escapeHtml(station['Serial Number'])}</small>` : ''}
                     ${dockedInstrumentHtml}
                     ${gasInletsHtml}
