@@ -116,7 +116,11 @@ async def scrape_equipment_async():
         from inet_scraper_async_table import scrape_table
         
         equipment_list_url = "https://inet.indsci.com/Dashboard/EquipmentList.aspx"
-        results = await scrape_table(equipment_list_url)
+        results = await scrape_table(
+            equipment_list_url,
+            username=config.get('inet_username'),
+            password=config.get('inet_password')
+        )
         
         return results
     except Exception as e:

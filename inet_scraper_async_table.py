@@ -18,13 +18,39 @@ import ssl
 class WebScraperAsync:
     """An async web scraper using aiohttp and BeautifulSoup."""
     
-    def __init__(self, cookie_file: str = "cookies.pkl"):
-        """Initialize the scraper with cookie persistence."""
+    def __init__(self, 
+                 cookie_file: str = "cookies.pkl",
+                 username: Optional[str] = None,
+                 password: Optional[str] = None,
+                 login_url: Optional[str] = None,
+                 username_field: Optional[str] = None,
+                 password_field: Optional[str] = None,
+                 submit_button: Optional[str] = None):
+        """
+        Initialize the scraper with cookie persistence.
+        
+        Args:
+            cookie_file: Path to file for storing cookies
+            username: Username for login (optional)
+            password: Password for login (optional)
+            login_url: URL of the login page (optional)
+            username_field: Name or id of the username field (optional)
+            password_field: Name or id of the password field (optional)
+            submit_button: Name or id of the submit button (optional)
+        """
         self.session: Optional[aiohttp.ClientSession] = None
         self.current_url: Optional[str] = None
         self.current_response: Optional[str] = None
         self.cookie_file = cookie_file
         self.cookies = {}
+        
+        # Store login credentials
+        self.username = username
+        self.password = password
+        self.login_url = login_url
+        self.username_field = username_field
+        self.password_field = password_field
+        self.submit_button = submit_button
         
         # Load existing cookies if they exist
         self.load_cookies()
@@ -329,6 +355,27 @@ class WebScraperAsync:
             return self.current_response
         return ""
     
+    async def login_with_stored_credentials(self) -> bool:
+        """
+        Login using stored credentials.
+        
+        Returns:
+            bool: True if login was successful, False otherwise
+        """
+        if not all([self.login_url, self.username_field, self.username, 
+                   self.password_field, self.password]):
+            print("Error: Missing login credentials. Please provide username, password, and login fields.")
+            return False
+        
+        return await self.login(
+            self.login_url,
+            self.username_field,
+            self.username,
+            self.password_field,
+            self.password,
+            self.submit_button
+        )
+    
     async def close(self):
         """Close the session and save cookies."""
         self.save_cookies()
@@ -357,11 +404,34 @@ async def check_if_logged_in(scraper: WebScraperAsync) -> bool:
         return False
 
 
-async def inet_login_and_save():
-    """Login to INET and save pages using cookie persistence."""
+async def inet_login_and_save(username: str = None, password: str = None):
+    """
+    Login to INET and save pages using cookie persistence.
     
-    # Initialize the scraper with cookie persistence
-    async with WebScraperAsync(cookie_file="inet_cookies.pkl") as scraper:
+    Args:
+        username: Username for INET login (if None, uses default)
+        password: Password for INET login (if None, uses default)
+    """
+    # Default credentials if not provided
+    username = username or "dashboard_user"
+    password = password or "900_Second!"
+    
+    # INET login configuration
+    login_url = "https://inet.indsci.com/Login.aspx"
+    username_field = "ctl00$cph1$main$Login1$UserName"
+    password_field = "ctl00$cph1$main$Login1$Password"
+    submit_button = "ctl00$cph1$main$Login1$LoginButton"
+    
+    # Initialize the scraper with cookie persistence and credentials
+    async with WebScraperAsync(
+        cookie_file="inet_cookies.pkl",
+        username=username,
+        password=password,
+        login_url=login_url,
+        username_field=username_field,
+        password_field=password_field,
+        submit_button=submit_button
+    ) as scraper:
         try:
             print("INET Login Scraper with Cookie Persistence (Async Version)")
             print("=" * 50)
@@ -377,21 +447,11 @@ async def inet_login_and_save():
             else:
                 # Need to login
                 print("Performing fresh login...")
-                
-                # INET login details with CORRECTED field names
-                login_url = "https://inet.indsci.com/Login.aspx"
-                username_field = "ctl00$cph1$main$Login1$UserName"  # Corrected: uses $ not _
-                username_value = "jporcelli"
-                password_field = "ctl00$cph1$main$Login1$Password"  # Corrected: uses $ not _
-                password_value = "qR2gKQ!Ub!qbRaOhMizuBzAfE1ZebPrgbGCL^C#SRiV*5hVky%&frcozcUqI!yn0Iay3F$iAI!WUNku06rb#U7KA%IPEN^XtFXW"
-                submit_button = "ctl00$cph1$main$Login1$LoginButton"  # Corrected: uses $ not _
-                
                 print(f"Attempting to login to: {login_url}")
-                print(f"Username: {username_value}")
+                print(f"Username: {username}")
                 
-                # Attempt login
-                if not await scraper.login(login_url, username_field, username_value, 
-                                          password_field, password_value, submit_button):
+                # Attempt login using stored credentials
+                if not await scraper.login_with_stored_credentials():
                     print("Login failed! Let's save the login page for debugging...")
                     await scraper.save_page("inet_login_debug.html", login_url)
                     print("Login page saved to inet_login_debug.html for inspection")
@@ -437,33 +497,47 @@ async def inet_login_and_save():
             print(f"An error occurred: {str(e)}")
 
 
-async def scrape_table(url: str, table_id: str = "ctl00_ctl00_ctl00_cph1_main_dr_Grid_DXMainTable") -> list:
+async def scrape_table(url: str, 
+                       table_id: str = "ctl00_ctl00_ctl00_cph1_main_dr_Grid_DXMainTable",
+                       username: str = None,
+                       password: str = None) -> list:
     """
     Scrape a table from a URL after ensuring login.
     
     Args:
         url: The URL to scrape
         table_id: The HTML id of the table to scrape
+        username: Username for INET login (if None, uses default)
+        password: Password for INET login (if None, uses default)
         
     Returns:
         List of dictionaries, where each dict represents a row with header names as keys
     """
-    async with WebScraperAsync(cookie_file="inet_cookies.pkl") as scraper:
+    # Default credentials if not provided
+    username = username or "dashboard_user"
+    password = password or "900_Second!"
+    
+    # INET login configuration
+    login_url = "https://inet.indsci.com/Login.aspx"
+    username_field = "ctl00$cph1$main$Login1$UserName"
+    password_field = "ctl00$cph1$main$Login1$Password"
+    submit_button = "ctl00$cph1$main$Login1$LoginButton"
+    
+    async with WebScraperAsync(
+        cookie_file="inet_cookies.pkl",
+        username=username,
+        password=password,
+        login_url=login_url,
+        username_field=username_field,
+        password_field=password_field,
+        submit_button=submit_button
+    ) as scraper:
         try:
             # Check if we're already logged in
             if not await check_if_logged_in(scraper):
                 print("Not logged in, performing login...")
                 
-                # INET login details
-                login_url = "https://inet.indsci.com/Login.aspx"
-                username_field = "ctl00$cph1$main$Login1$UserName"
-                username_value = "jporcelli"
-                password_field = "ctl00$cph1$main$Login1$Password"
-                password_value = "qR2gKQ!Ub!qbRaOhMizuBzAfE1ZebPrgbGCL^C#SRiV*5hVky%&frcozcUqI!yn0Iay3F$iAI!WUNku06rb#U7KA%IPEN^XtFXW"
-                submit_button = "ctl00$cph1$main$Login1$LoginButton"
-                
-                if not await scraper.login(login_url, username_field, username_value, 
-                                          password_field, password_value, submit_button):
+                if not await scraper.login_with_stored_credentials():
                     print("Login failed!")
                     return []
             
@@ -546,14 +620,20 @@ async def scrape_table(url: str, table_id: str = "ctl00_ctl00_ctl00_cph1_main_dr
             return []
 
 
-async def scrape_equipment_list():
-    """Scrape the equipment list table and display results."""
+async def scrape_equipment_list(username: str = None, password: str = None):
+    """
+    Scrape the equipment list table and display results.
+    
+    Args:
+        username: Username for INET login (if None, uses default)
+        password: Password for INET login (if None, uses default)
+    """
     equipment_list_url = "https://inet.indsci.com/Dashboard/EquipmentList.aspx"
     
     print("INET Equipment List Scraper (Async Version)")
     print("=" * 50)
     
-    results = await scrape_table(equipment_list_url)
+    results = await scrape_table(equipment_list_url, username=username, password=password)
     
     if results:
         print(f"\nExtracted {len(results)} equipment records:")

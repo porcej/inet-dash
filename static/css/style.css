@@ -10,9 +10,10 @@
 body {
     background-color: var(--bs-body-bg);
     color: var(--bs-body-color);
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 /* Make the main container fill remaining space */
@@ -20,11 +21,14 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    max-height: calc(100vh - 60px); /* Subtract navbar height */
 }
 
 /* Make rows fill the container height */
 .container-fluid.mt-3 > .row {
     flex: 1;
+    overflow: hidden;
 }
 
 /* Make columns stretch to full height */
@@ -32,18 +36,23 @@ body {
 .container-fluid.mt-3 > .row > .col-md-9 {
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 /* Docking stations column - distribute cards equally */
 #docking-stations-container {
     gap: 0.5rem;
+    overflow: hidden; /* No scrolling at container level */
+    display: flex;
+    flex-direction: column;
 }
 
 #docking-stations-container .docking-station-card {
-    flex: 1;
+    flex: 1; /* Each card takes equal space */
     display: flex;
     flex-direction: column;
     min-height: 0; /* Important for flexbox scrolling */
+    overflow: hidden; /* Contain card content */
 }
 
 /* Brighter green for checkmarks in dark backgrounds */
@@ -79,12 +88,32 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-height: 0; /* Important for flex children */
+}
+
+/* Card header should not grow */
+.container-fluid.mt-3 > .row > .col-md-9 .card-header {
+    flex-shrink: 0;
 }
 
 /* Make card bodies scrollable and fill space */
 .container-fluid.mt-3 > .row > .col-md-9 .card-body {
     flex: 1;
+    overflow: hidden; /* Hide overflow on card-body itself */
+    padding: 0; /* Remove padding to let table-responsive handle it */
+    min-height: 0; /* Important for flex children */
+}
+
+/* Ensure table-responsive fills the card body and scrolls */
+.container-fluid.mt-3 > .row > .col-md-9 .card-body .table-responsive {
+    height: 100%;
     overflow-y: auto;
+    overflow-x: auto;
+}
+
+/* Card footer should not grow */
+.container-fluid.mt-3 > .row > .col-md-9 .card-footer {
+    flex-shrink: 0;
 }
 
 /* Card styling */
@@ -201,10 +230,11 @@ body {
 /* Responsive table - now handled by flex layout */
 
 /* Sticky table header */
-.table-responsive thead {
+.table-responsive thead th {
     position: sticky;
     top: 0;
     z-index: 10;
+    background-color: var(--bs-secondary);
 }
 
 /* Loading spinner overlay */
@@ -296,10 +326,27 @@ i.bi {
         font-size: 1rem;
     }
     
-    /* On mobile, columns stack so flex layout still works */
+    /* On mobile, columns stack so each gets limited height */
     .container-fluid.mt-3 > .row > .col-md-3,
     .container-fluid.mt-3 > .row > .col-md-9 {
         max-height: 50vh;
+        overflow-y: auto;
+    }
+    
+    /* On mobile, allow docking stations container to scroll */
+    #docking-stations-container {
+        overflow-y: auto;
+    }
+    
+    body {
+        height: auto;
+        min-height: 100vh;
+        overflow: auto;
+    }
+    
+    .container-fluid.mt-3 {
+        max-height: none;
+        overflow: visible;
     }
 }
 
