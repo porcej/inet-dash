@@ -406,4 +406,51 @@ updateLastUpdateTime = function(timestamp) {
 
 console.log('Dashboard WebSocket client initialized');
 updateInstrumentsTableHeader();
+initAutoHideNavbar();
+
+/**
+ * Auto-hide the dashboard navbar unless the cursor is near the top of the page.
+ */
+function initAutoHideNavbar() {
+    const navbar = document.getElementById('dashboard-navbar');
+    const hoverZone = document.getElementById('navbar-hover-zone');
+    if (!navbar || !hoverZone) {
+        return;
+    }
+
+    const TOP_THRESHOLD = 56;
+    let hideTimeout = null;
+
+    function showNavbar() {
+        clearTimeout(hideTimeout);
+        navbar.classList.add('is-visible');
+    }
+
+    function scheduleHideNavbar() {
+        clearTimeout(hideTimeout);
+        hideTimeout = setTimeout(() => {
+            navbar.classList.remove('is-visible');
+        }, 250);
+    }
+
+    function handleMouseMove(event) {
+        if (event.clientY <= TOP_THRESHOLD) {
+            showNavbar();
+            return;
+        }
+
+        if (!navbar.matches(':hover')) {
+            scheduleHideNavbar();
+        }
+    }
+
+    document.addEventListener('mousemove', handleMouseMove);
+    hoverZone.addEventListener('mouseenter', showNavbar);
+    navbar.addEventListener('mouseenter', showNavbar);
+    navbar.addEventListener('mouseleave', (event) => {
+        if (event.clientY > TOP_THRESHOLD) {
+            scheduleHideNavbar();
+        }
+    });
+}
 

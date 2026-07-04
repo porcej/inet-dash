@@ -31,7 +31,9 @@ body.dashboard-page .container-fluid.mt-3 {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    max-height: calc(100vh - 60px); /* Subtract navbar height */
+    max-height: 100vh;
+    margin-top: 0 !important;
+    padding-top: 0.75rem;
 }
 
 /* Make rows fill the container height */
@@ -191,6 +193,29 @@ body.dashboard-page .container-fluid.mt-3 > .row > .col-md-9 .card-footer {
 /* Navbar */
 .navbar {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+body.dashboard-page #dashboard-navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1030;
+    transform: translateY(-100%);
+    transition: transform 0.25s ease-in-out;
+}
+
+body.dashboard-page #dashboard-navbar.is-visible {
+    transform: translateY(0);
+}
+
+body.dashboard-page #navbar-hover-zone {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 28px;
+    z-index: 1029;
 }
 
 /* Alert animations */

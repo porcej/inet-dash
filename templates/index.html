@@ -15,7 +15,8 @@
 <body class="dashboard-page">
     {% from 'partials/instrument_cell.html' import render as render_instrument_cell %}
     <!-- Navigation -->
-    <nav class="navbar navbar-dark bg-dark border-bottom">
+    <div id="navbar-hover-zone" aria-hidden="true"></div>
+    <nav id="dashboard-navbar" class="navbar navbar-dark bg-dark border-bottom">
         <div class="container-fluid">
             <span class="navbar-brand mb-0 h1">
                 <i class="bi bi-speedometer2"></i> INET Equipment Dashboard
