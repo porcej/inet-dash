@@ -201,6 +201,10 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# Local app configuration and session data
+config.json
+inet_cookies.pkl
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
