@@ -12,7 +12,7 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
+<body class="admin-page">
     <!-- Navigation -->
     <nav class="navbar navbar-dark bg-dark border-bottom">
         <div class="container-fluid">
@@ -30,7 +30,7 @@
         </div>
     </nav>
 
-    <div class="container mt-4">
+    <div class="container mt-4 mb-5">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -150,6 +150,31 @@
                                         Mark instruments as overdue after this many days since last calibration
                                     </div>
                                 </div>
+                            </div>
+
+                            <!-- Instrument Columns Section -->
+                            <h6 class="border-bottom pb-2 mb-3 mt-4">
+                                <i class="bi bi-layout-three-columns"></i> Instrument Table Columns
+                            </h6>
+
+                            <div class="row">
+                                {% for column in instrument_columns %}
+                                <div class="col-md-6 col-lg-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox"
+                                               id="column_{{ column.id }}"
+                                               name="instrument_visible_columns"
+                                               value="{{ column.id }}"
+                                               {% if column.visible %}checked{% endif %}>
+                                        <label class="form-check-label" for="column_{{ column.id }}">
+                                            {{ column.label }}
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="form-text mb-3">
+                                Choose which columns appear on the dashboard instruments table
                             </div>
 
                             <!-- Submit Buttons -->

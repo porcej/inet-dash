@@ -5,5 +5,14 @@
   "inet_password": "********",
   "update_frequency": 1,
   "calibration_due_soon_days": 20,
-  "calibration_overdue_days": 30
+  "calibration_overdue_days": 30,
+  "instrument_visible_columns": [
+    "unit",
+    "model",
+    "serial_number",
+    "upgrade",
+    "last_calibration",
+    "days_since_cal",
+    "status"
+  ]
 }

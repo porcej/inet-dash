@@ -51,6 +51,51 @@ equipment_data = {
 # Scheduler
 scheduler = BackgroundScheduler()
 
+INSTRUMENT_TABLE_COLUMNS = [
+    {'id': 'unit', 'label': 'Unit', 'field': 'Equipment Group', 'type': 'text'},
+    {'id': 'model', 'label': 'Model', 'field': 'Type', 'type': 'text'},
+    {'id': 'serial_number', 'label': 'Serial Number', 'field': 'Serial Number', 'type': 'text'},
+    {'id': 'upgrade', 'label': 'Upgrade', 'field': 'Upgrade Available', 'type': 'upgrade'},
+    {'id': 'last_calibration', 'label': 'Last Calibration Time', 'field': 'Last Calibration Time', 'type': 'text'},
+    {'id': 'next_calibration', 'label': 'Next Calibration Date', 'field': 'Next Calibration Date', 'type': 'text'},
+    {'id': 'days_since_cal', 'label': 'Days Since Cal', 'type': 'days_since_cal'},
+    {'id': 'status', 'label': 'Status', 'type': 'status'},
+]
+
+
+def default_instrument_visible_columns():
+    """Return the default list of visible instrument table column IDs."""
+    return [column['id'] for column in INSTRUMENT_TABLE_COLUMNS]
+
+
+def get_instrument_column_settings(config):
+    """Return all instrument columns with visibility flags for the admin UI."""
+    visible_ids = set(config.get('instrument_visible_columns') or default_instrument_visible_columns())
+    valid_ids = {column['id'] for column in INSTRUMENT_TABLE_COLUMNS}
+    visible_ids = {column_id for column_id in visible_ids if column_id in valid_ids}
+    if not visible_ids:
+        visible_ids = set(default_instrument_visible_columns())
+    return [
+        {**column, 'visible': column['id'] in visible_ids}
+        for column in INSTRUMENT_TABLE_COLUMNS
+    ]
+
+
+def get_visible_instrument_columns(config):
+    """Return only the instrument columns that should be shown on the dashboard."""
+    return [
+        column for column in get_instrument_column_settings(config)
+        if column['visible']
+    ]
+
+
+def emit_display_config_update():
+    """Push dashboard display settings to connected clients."""
+    config = load_config()
+    socketio.emit('display_config_update', {
+        'visible_columns': get_visible_instrument_columns(config)
+    }, namespace='/')
+
 
 class User(UserMixin):
     """Simple user model for admin authentication"""
@@ -76,6 +121,7 @@ def load_config():
         'update_frequency': 60,  # minutes
         'calibration_due_soon_days': 170,
         'calibration_overdue_days': 180,
+        'instrument_visible_columns': default_instrument_visible_columns(),
     }
     
     try:
@@ -304,13 +350,15 @@ def schedule_updates():
 @app.route('/')
 def index():
     """Main dashboard page"""
+    config = load_config()
     with data_lock:
         data = equipment_data.copy()
     
     return render_template('index.html', 
                          instruments=data['instruments'],
                          docking_stations=data['docking_stations'],
-                         last_update=data['last_update'])
+                         last_update=data['last_update'],
+                         visible_columns=get_visible_instrument_columns(config))
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -382,6 +430,14 @@ def admin():
         except ValueError:
             flash('Invalid calibration alert settings', 'danger')
             return redirect(url_for('admin'))
+
+        visible_columns = request.form.getlist('instrument_visible_columns')
+        valid_column_ids = {column['id'] for column in INSTRUMENT_TABLE_COLUMNS}
+        visible_columns = [column_id for column_id in visible_columns if column_id in valid_column_ids]
+        if not visible_columns:
+            flash('At least one instrument column must be visible', 'danger')
+            return redirect(url_for('admin'))
+        config['instrument_visible_columns'] = visible_columns
         
         if save_config(config):
             flash('Configuration saved successfully!', 'success')
@@ -390,6 +446,7 @@ def admin():
             schedule_updates()
 
             recategorize_equipment_data()
+            emit_display_config_update()
             
             # Trigger immediate update if credentials changed
             if request.form.get('inet_username') or request.form.get('inet_password'):
@@ -403,7 +460,11 @@ def admin():
     template_config = config.copy()
     template_config['inet_password'] = '********' if config.get('inet_password') else ''
     
-    return render_template('admin.html', config=template_config)
+    return render_template(
+        'admin.html',
+        config=template_config,
+        instrument_columns=get_instrument_column_settings(config),
+    )
 
 
 @app.route('/api/refresh', methods=['POST'])
@@ -440,6 +501,7 @@ def handle_connect():
             'docking_stations': equipment_data['docking_stations'],
             'last_update': equipment_data['last_update']
         })
+    emit_display_config_update()
 
 
 @socketio.on('disconnect')

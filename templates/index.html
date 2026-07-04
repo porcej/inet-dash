@@ -12,7 +12,8 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
+<body class="dashboard-page">
+    {% from 'partials/instrument_cell.html' import render as render_instrument_cell %}
     <!-- Navigation -->
     <nav class="navbar navbar-dark bg-dark border-bottom">
         <div class="container-fluid">
@@ -183,59 +184,24 @@
                         <div class="table-responsive">
                             <table class="table table-dark table-striped table-hover mb-0" id="instruments-table">
                                 <thead class="table-secondary">
-                                    <tr>
-                                        <th>Unit</th>
-                                        <th>Model</th>
-                                        <th>Serial Number</th>
-                                        <th>Upgrade</th>
-                                        <th>Last Calibration Time</th>
-                                        <th>Next Calibration Date</th>
-                                        <th>Days Since Cal</th>
-                                        <th>Status</th>
+                                    <tr id="instruments-header-row">
+                                        {% for column in visible_columns %}
+                                        <th>{{ column.label }}</th>
+                                        {% endfor %}
                                     </tr>
                                 </thead>
                                 <tbody id="instruments-body">
                                     {% if instruments %}
                                         {% for instrument in instruments %}
                                         <tr class="{% if instrument._calibration_status == 'danger' %}table-danger{% elif instrument._calibration_status == 'warning' %}table-warning{% endif %}">
-                                            <td>{{ instrument.get('Equipment Group', 'N/A') }}</td>
-                                            <td>{{ instrument.get('Type', 'N/A') }}</td>
-                                            <td>{{ instrument.get('Serial Number', 'N/A') }}</td>
-                                            <td class="text-center">
-                                                {% set upgrade = instrument.get('Upgrade Available', '') %}
-                                                {% if upgrade.lower() == 'no' %}
-                                                    <i class="bi bi-check-circle-fill text-success" title="No upgrade needed"></i>
-                                                {% elif upgrade.startswith('YesPending') %}
-                                                    <i class="bi bi-clock-fill text-warning" title="{{ upgrade }}"></i>
-                                                {% elif upgrade %}
-                                                    <i class="bi bi-exclamation-circle-fill text-danger" title="{{ upgrade }}"></i>
-                                                {% else %}
-                                                    <span class="text-muted">-</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>{{ instrument.get('Last Calibration Time', 'N/A') }}</td>
-                                            <td>{{ instrument.get('Next Calibration Date', 'N/A') }}</td>
-                                            <td>
-                                                {% if instrument._days_since_calibration is not none %}
-                                                    {{ instrument._days_since_calibration }} days
-                                                {% else %}
-                                                    N/A
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                {% if instrument._calibration_status == 'danger' %}
-                                                    <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Overdue</span>
-                                                {% elif instrument._calibration_status == 'warning' %}
-                                                    <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> Due Soon</span>
-                                                {% else %}
-                                                    <span class="badge bg-success"><i class="bi bi-check-circle"></i> OK</span>
-                                                {% endif %}
-                                            </td>
+                                            {% for column in visible_columns %}
+                                            {{ render_instrument_cell(column, instrument) }}
+                                            {% endfor %}
                                         </tr>
                                         {% endfor %}
                                     {% else %}
                                         <tr>
-                                            <td colspan="8" class="text-center text-muted py-5">
+                                            <td colspan="{{ visible_columns|length }}" class="text-center text-muted py-5">
                                                 <i class="bi bi-inbox fs-1"></i>
                                                 <p class="mt-2">No instruments found</p>
                                             </td>
@@ -258,6 +224,10 @@
     
     <!-- Socket.IO -->
     <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+
+    <script>
+        window.visibleInstrumentColumns = {{ visible_columns | tojson }};
+    </script>
     
     <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>

@@ -8,6 +8,8 @@ const socket = io();
 // Connection status tracking
 let isConnected = false;
 const connectionStatus = document.getElementById('connection-status');
+let visibleInstrumentColumns = window.visibleInstrumentColumns || [];
+let latestInstruments = [];
 
 // Update connection status badge
 function updateConnectionStatus(connected) {
@@ -41,9 +43,10 @@ socket.on('connect_error', (error) => {
 // Handle equipment updates
 socket.on('equipment_update', (data) => {
     console.log('Received equipment update:', data);
+    latestInstruments = data.instruments || [];
     
     // Update instruments table
-    updateInstrumentsTable(data.instruments);
+    updateInstrumentsTable(latestInstruments);
     
     // Update docking stations list
     updateDockingStationsList(data.docking_stations);
@@ -54,24 +57,66 @@ socket.on('equipment_update', (data) => {
     }
     
     // Update statistics
-    updateStatistics(data.instruments);
+    updateStatistics(latestInstruments);
 });
+
+socket.on('display_config_update', (data) => {
+    visibleInstrumentColumns = data.visible_columns || [];
+    updateInstrumentsTableHeader();
+    updateInstrumentsTable(latestInstruments);
+});
+
+/**
+ * Update the instruments table header from the current column config
+ */
+function updateInstrumentsTableHeader() {
+    const headerRow = document.getElementById('instruments-header-row');
+    if (!headerRow) {
+        return;
+    }
+
+    headerRow.innerHTML = visibleInstrumentColumns
+        .map(column => `<th>${escapeHtml(column.label)}</th>`)
+        .join('');
+}
+
+/**
+ * Render a single instrument table cell
+ */
+function renderInstrumentCell(column, instrument) {
+    switch (column.type) {
+        case 'upgrade':
+            return `<td class="text-center">${getUpgradeIcon(instrument['Upgrade Available'])}</td>`;
+        case 'days_since_cal': {
+            const daysSinceCalibration = instrument._days_since_calibration !== null
+                ? `${instrument._days_since_calibration} days`
+                : 'N/A';
+            return `<td>${escapeHtml(daysSinceCalibration)}</td>`;
+        }
+        case 'status':
+            return `<td>${getStatusBadge(instrument._calibration_status)}</td>`;
+        default:
+            return `<td>${escapeHtml(instrument[column.field] || 'N/A')}</td>`;
+    }
+}
 
 /**
  * Update the instruments table with new data
  */
 function updateInstrumentsTable(instruments) {
     const tbody = document.getElementById('instruments-body');
+    const columnCount = visibleInstrumentColumns.length || 1;
     
     if (!instruments || instruments.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center text-muted py-5">
+                <td colspan="${columnCount}" class="text-center text-muted py-5">
                     <i class="bi bi-inbox fs-1"></i>
                     <p class="mt-2">No instruments found</p>
                 </td>
             </tr>
         `;
+        document.getElementById('total-instruments').textContent = '0';
         return;
     }
     
@@ -92,22 +137,13 @@ function updateInstrumentsTable(instruments) {
     
     instruments.forEach(instrument => {
         const rowClass = getRowClass(instrument._calibration_status);
-        const statusBadge = getStatusBadge(instrument._calibration_status);
-        const daysSinceCalibration = instrument._days_since_calibration !== null
-            ? `${instrument._days_since_calibration} days`
-            : 'N/A';
-        const upgradeIcon = getUpgradeIcon(instrument['Upgrade Available']);
+        const cells = visibleInstrumentColumns
+            .map(column => renderInstrumentCell(column, instrument))
+            .join('');
         
         html += `
             <tr class="${rowClass}">
-                <td>${escapeHtml(instrument['Equipment Group'] || 'N/A')}</td>
-                <td>${escapeHtml(instrument['Type'] || 'N/A')}</td>
-                <td>${escapeHtml(instrument['Serial Number'] || 'N/A')}</td>
-                <td class="text-center">${upgradeIcon}</td>
-                <td>${escapeHtml(instrument['Last Calibration Time'] || 'N/A')}</td>
-                <td>${escapeHtml(instrument['Next Calibration Date'] || 'N/A')}</td>
-                <td>${daysSinceCalibration}</td>
-                <td>${statusBadge}</td>
+                ${cells}
             </tr>
         `;
     });
@@ -369,4 +405,5 @@ updateLastUpdateTime = function(timestamp) {
 };
 
 console.log('Dashboard WebSocket client initialized');
+updateInstrumentsTableHeader();
 

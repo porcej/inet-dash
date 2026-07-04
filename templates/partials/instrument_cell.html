@@ -1,0 +1,36 @@
+{% macro render(column, instrument) %}
+    {% if column.type == 'upgrade' %}
+        <td class="text-center">
+            {% set upgrade = instrument.get('Upgrade Available', '') %}
+            {% if upgrade.lower() == 'no' %}
+                <i class="bi bi-check-circle-fill text-success" title="No upgrade needed"></i>
+            {% elif upgrade.startswith('YesPending') %}
+                <i class="bi bi-clock-fill text-warning" title="{{ upgrade }}"></i>
+            {% elif upgrade %}
+                <i class="bi bi-exclamation-circle-fill text-danger" title="{{ upgrade }}"></i>
+            {% else %}
+                <span class="text-muted">-</span>
+            {% endif %}
+        </td>
+    {% elif column.type == 'days_since_cal' %}
+        <td>
+            {% if instrument._days_since_calibration is not none %}
+                {{ instrument._days_since_calibration }} days
+            {% else %}
+                N/A
+            {% endif %}
+        </td>
+    {% elif column.type == 'status' %}
+        <td>
+            {% if instrument._calibration_status == 'danger' %}
+                <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Overdue</span>
+            {% elif instrument._calibration_status == 'warning' %}
+                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> Due Soon</span>
+            {% else %}
+                <span class="badge bg-success"><i class="bi bi-check-circle"></i> OK</span>
+            {% endif %}
+        </td>
+    {% else %}
+        <td>{{ instrument.get(column.field, 'N/A') }}</td>
+    {% endif %}
+{% endmacro %}

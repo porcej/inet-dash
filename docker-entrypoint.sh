@@ -15,7 +15,8 @@ if [ ! -f "/app/config.json" ]; then
   "inet_password": "",
   "update_frequency": 60,
   "calibration_due_soon_days": 170,
-  "calibration_overdue_days": 180
+  "calibration_overdue_days": 180,
+  "instrument_visible_columns": ["unit", "model", "serial_number", "upgrade", "last_calibration", "next_calibration", "days_since_cal", "status"]
 }
 EOF
 fi
