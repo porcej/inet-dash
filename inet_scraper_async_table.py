@@ -9,10 +9,77 @@ from bs4 import BeautifulSoup
 import asyncio
 import os
 import pickle
-from urllib.parse import urljoin
-from typing import Optional
+import re
+from urllib.parse import urljoin, urlparse, urlunparse, parse_qsl, urlencode
+from typing import Optional, Tuple, Dict
 import sys
 import ssl
+
+
+INET_LOGIN_URL = "https://inet.indsci.com/Login.aspx"
+SECUREAUTH_HOST = "secureauth.com"
+
+
+def _decode_js_uri_path(encoded_path: str) -> str:
+    """Decode SecureAuth fingerprint redirect paths embedded in JavaScript."""
+    return encoded_path.replace("\\/", "/").replace("\\u0026", "&")
+
+
+def _is_dbfp_page(html: str) -> bool:
+    return "SecureAuth.getFingerprint" in html and "redirectURL = new URL" in html
+
+
+def _build_dbfp_redirect_url(html: str, base_url: str) -> Optional[str]:
+    """Build the dbfp=success redirect URL from a fingerprint loader page."""
+    match = re.search(r'redirectURL = new URL\(decodeURI\("([^"]+)"', html)
+    if not match:
+        return None
+
+    base = urlparse(base_url)
+    path = _decode_js_uri_path(match.group(1))
+    redirect_url = urlunparse((base.scheme, base.netloc, path, "", "", ""))
+    parts = urlparse(redirect_url)
+    query = dict(parse_qsl(parts.query))
+    query["dbfp"] = "success"
+    query["duration"] = "100"
+    return urlunparse((parts.scheme, parts.netloc, parts.path, parts.params, urlencode(query), parts.fragment))
+
+
+def _parse_auto_submit_form(html: str) -> Optional[Tuple[str, Dict[str, str]]]:
+    """Parse OAuth callback pages that auto-post hidden fields to INET."""
+    soup = BeautifulSoup(html, "html.parser")
+    form = soup.find("form", method=re.compile("^post$", re.I))
+    if not form:
+        return None
+
+    action = form.get("action", "")
+    if not action:
+        return None
+
+    fields = {}
+    for hidden_input in form.find_all("input", type="hidden"):
+        name = hidden_input.get("name")
+        if name:
+            fields[name] = hidden_input.get("value", "")
+
+    if "code" not in fields:
+        return None
+
+    return action, fields
+
+
+def _is_login_page(html: str, url: str) -> bool:
+    """Return True when the response is still an authentication page."""
+    if SECUREAUTH_HOST in url.lower():
+        return True
+
+    soup = BeautifulSoup(html, "html.parser")
+    title = soup.find("title")
+    title_text = title.get_text(strip=True).lower() if title else ""
+    if title_text in {"log in", "login"}:
+        return True
+
+    return "Login.aspx" in url or "/login" in url.lower()
 
 
 class WebScraperAsync:
@@ -91,16 +158,6 @@ class WebScraperAsync:
                 headers=headers,
                 connector=connector,
                 cookie_jar=cookie_jar
-            )
-            
-            # Add AWS load balancer cookies for inet.indsci.com
-            self.add_cookie(
-                "AWSALB", 
-                "lO9Hx450KJM1R9A3hpoGvXvEKzx2H90bLYmykxwR1OoQhSG97IrvBUjeBHMyy9Ab48bP3Ko1sBbEkt1LO3ZnALGvuOYskuAXtTjUSCSzqpZO4G50nsU5iazAXeOM"
-            )
-            self.add_cookie(
-                "AWSALBCORS", 
-                "lO9Hx450KJM1R9A3hpoGvXvEKzx2H90bLYmykxwR1OoQhSG97IrvBUjeBHMyy9Ab48bP3Ko1sBbEkt1LO3ZnALGvuOYskuAXtTjUSCSzqpZO4G50nsU5iazAXeOM"
             )
     
     def load_cookies(self):
@@ -189,101 +246,182 @@ class WebScraperAsync:
             return cookie_dict
         return self.cookies.copy()
     
-    async def login(self, 
-                   login_url: str, 
-                   username_field: str, 
-                   username_value: str, 
-                   password_field: str, 
-                   password_value: str, 
+    async def _fetch_through_dbfp(self, url: str) -> Tuple[str, str]:
+        """Follow SecureAuth browser-fingerprint redirects until a real page loads."""
+        current_url = url
+        html = ""
+
+        for _ in range(5):
+            async with self.session.get(current_url, allow_redirects=True, timeout=30) as response:
+                response.raise_for_status()
+                html = await response.text()
+                current_url = str(response.url)
+
+            if not _is_dbfp_page(html):
+                break
+
+            next_url = _build_dbfp_redirect_url(html, current_url)
+            if not next_url:
+                break
+            current_url = next_url
+
+        return html, current_url
+
+    async def _submit_oauth_callback(self, html: str) -> Tuple[str, str]:
+        """Submit the OAuth authorization code back to INET."""
+        parsed_form = _parse_auto_submit_form(html)
+        if not parsed_form:
+            return html, self.current_url or ""
+
+        action, fields = parsed_form
+        if action.startswith("./") or action.startswith("../"):
+            return html, self.current_url or ""
+
+        if not action.startswith("http"):
+            action = urljoin(self.current_url or INET_LOGIN_URL, action)
+
+        print(f"Completing OAuth callback to: {action}")
+        async with self.session.post(action, data=fields, allow_redirects=True, timeout=30) as response:
+            response.raise_for_status()
+            html = await response.text()
+            current_url = str(response.url)
+
+        if _is_dbfp_page(html):
+            html, current_url = await self._fetch_through_dbfp(_build_dbfp_redirect_url(html, current_url) or current_url)
+
+        callback_form = _parse_auto_submit_form(html)
+        if callback_form:
+            html, current_url = await self._submit_oauth_callback(html)
+
+        return html, current_url
+
+    async def _select_authentication_id(self, discovery_url: str, login_id: str,
+                                        login_state: str, username: str) -> Optional[str]:
+        """Discover the SecureAuth identity provider for the given username."""
+        payload = {
+            "identifier": username,
+            "login_id": login_id,
+            "login_state": login_state,
+        }
+        async with self.session.post(discovery_url, json=payload, timeout=30) as response:
+            response.raise_for_status()
+            data = await response.json()
+
+        idps = data.get("idps") or []
+        if not idps:
+            print("Error: No identity providers found for this username")
+            return None
+
+        for idp in idps:
+            if idp.get("instant_redirect"):
+                return idp.get("id")
+
+        return idps[0].get("id")
+
+    async def login(self,
+                   login_url: str,
+                   username_value: str,
+                   password_value: str,
+                   username_field: Optional[str] = None,
+                   password_field: Optional[str] = None,
                    submit_button: Optional[str] = None) -> bool:
         """
-        Log into a website using the provided credentials.
-        
-        Args:
-            login_url: URL of the login page
-            username_field: Name or id of the username field
-            username_value: Username to use for login
-            password_field: Name or id of the password field
-            password_value: Password to use for login
-            submit_button: Name or id of the submit button (optional)
-            
-        Returns:
-            bool: True if login was successful, False otherwise
+        Log into INET via SecureAuth OAuth.
+
+        INET now redirects Login.aspx to SecureAuth. This method follows that flow:
+        fingerprint check -> username discovery -> password entry -> OAuth callback.
         """
+        del username_field, password_field, submit_button  # legacy args kept for compatibility
+
         try:
             await self.create_session()
-            
-            # First, get the login page to extract form data
+
             print(f"Opening login page: {login_url}")
-            async with self.session.get(login_url, timeout=30) as response:
+            html, current_url = await self._fetch_through_dbfp(login_url)
+
+            if not SECUREAUTH_HOST in current_url:
+                print(f"Unexpected login redirect: {current_url}")
+                return False
+
+            login_page_url = current_url
+            login_parts = urlparse(login_page_url)
+            login_query = dict(parse_qsl(login_parts.query))
+            login_id = login_query.get("login_id")
+            login_state = login_query.get("login_state")
+            if not login_id or not login_state:
+                print("Error: Missing SecureAuth login session parameters")
+                return False
+
+            discovery_url = f"{login_page_url.split('?')[0]}/discovery"
+            print(f"Discovering identity provider for: {username_value}")
+            authentication_id = await self._select_authentication_id(
+                discovery_url, login_id, login_state, username_value
+            )
+            if not authentication_id:
+                return False
+
+            print(f"Using identity provider: {authentication_id}")
+            async with self.session.post(
+                login_page_url,
+                data={
+                    "version": "2",
+                    "source": "main_login_page",
+                    "username": username_value,
+                    "authentication_id": authentication_id,
+                },
+                allow_redirects=True,
+                timeout=30,
+            ) as response:
                 response.raise_for_status()
-                html_content = await response.text()
-            
-            # Parse the HTML to find the form
-            soup = BeautifulSoup(html_content, 'html.parser')
-            
-            # Find the login form
-            form = soup.find('form')
-            if not form:
-                print("Error: No form found on the login page")
+                html = await response.text()
+                current_url = str(response.url)
+
+            if _is_dbfp_page(html):
+                next_url = _build_dbfp_redirect_url(html, current_url)
+                if not next_url:
+                    print("Error: Could not parse federation fingerprint redirect")
+                    return False
+                html, current_url = await self._fetch_through_dbfp(next_url)
+
+            if "text-field-password-input" not in html:
+                print("Error: Password form not reached during login")
                 return False
-            
-            # Extract form action and method
-            form_action = form.get('action', '')
-            form_method = form.get('method', 'post').lower()
-            
-            # Build the full URL for form submission
-            if form_action.startswith('http'):
-                submit_url = form_action
-            else:
-                submit_url = urljoin(login_url, form_action)
-            
-            # Prepare form data
-            form_data = {}
-            
-            # Add all hidden fields from the form
-            for hidden_input in form.find_all('input', type='hidden'):
-                name = hidden_input.get('name')
-                value = hidden_input.get('value', '')
-                if name:
-                    form_data[name] = value
-            
-            # Add username and password
-            form_data[username_field] = username_value
-            form_data[password_field] = password_value
-            
-            # Add submit button if specified
-            if submit_button:
-                form_data[submit_button] = submit_button
-            
-            print(f"Filling username field '{username_field}' with '{username_value}'")
-            print(f"Filling password field '{password_field}'")
-            print(f"Submitting form to: {submit_url}")
-            
-            # Submit the form
-            if form_method == 'get':
-                async with self.session.get(submit_url, params=form_data, timeout=30) as response:
-                    response.raise_for_status()
-                    self.current_response = await response.text()
-                    self.current_url = str(response.url)
-            else:
-                async with self.session.post(submit_url, data=form_data, timeout=30) as response:
-                    response.raise_for_status()
-                    self.current_response = await response.text()
-                    self.current_url = str(response.url)
-            
-            print(f"Login response URL: {self.current_url}")
-            
-            # Basic check: if we're still on the login page, login probably failed
-            if login_url in self.current_url or 'login' in self.current_url.lower():
-                print("Warning: Still on login page - login may have failed")
+
+            print("Submitting credentials to SecureAuth")
+            async with self.session.post(
+                current_url,
+                data={
+                    "identifier": username_value,
+                    "password": password_value,
+                    "authn_mode": "password_view",
+                },
+                allow_redirects=True,
+                timeout=30,
+            ) as response:
+                response.raise_for_status()
+                html = await response.text()
+                current_url = str(response.url)
+
+            if _is_dbfp_page(html):
+                next_url = _build_dbfp_redirect_url(html, current_url)
+                if next_url:
+                    html, current_url = await self._fetch_through_dbfp(next_url)
+
+            callback_form = _parse_auto_submit_form(html)
+            if callback_form:
+                html, current_url = await self._submit_oauth_callback(html)
+
+            self.current_response = html
+            self.current_url = current_url
+
+            if _is_login_page(html, current_url):
+                print("Warning: Still on a login page - authentication may have failed")
                 return False
-            
-            print("Login appears successful!")
-            # Save cookies after successful login
+
+            print(f"Login successful! Current URL: {current_url}")
             self.save_cookies()
             return True
-            
+
         except aiohttp.ClientError as e:
             print(f"Network error during login: {str(e)}")
             return False
@@ -362,18 +500,14 @@ class WebScraperAsync:
         Returns:
             bool: True if login was successful, False otherwise
         """
-        if not all([self.login_url, self.username_field, self.username, 
-                   self.password_field, self.password]):
-            print("Error: Missing login credentials. Please provide username, password, and login fields.")
+        if not all([self.login_url, self.username, self.password]):
+            print("Error: Missing login credentials. Please provide username, password, and login URL.")
             return False
         
         return await self.login(
             self.login_url,
-            self.username_field,
             self.username,
-            self.password_field,
             self.password,
-            self.submit_button
         )
     
     async def close(self):
@@ -387,18 +521,28 @@ async def check_if_logged_in(scraper: WebScraperAsync) -> bool:
     """Check if we're already logged in by trying to access a protected page."""
     try:
         await scraper.create_session()
-        
-        # Try to access the dashboard - if we're logged in, this should work
+
         test_url = "https://inet.indsci.com/Dashboard/LandingPage.aspx"
-        async with scraper.session.get(test_url, timeout=30) as response:
-            # Check if we're redirected to login page or if we get the dashboard
-            if 'login' in str(response.url).lower() or 'Login.aspx' in str(response.url):
+        async with scraper.session.get(test_url, allow_redirects=True, timeout=30) as response:
+            html = await response.text()
+            final_url = str(response.url)
+
+            if _is_login_page(html, final_url):
                 print("Not logged in - cookies expired or invalid")
                 return False
-            else:
+
+            if "DXMainTable" in html or "EquipmentList" in html or "LandingPage" in final_url:
                 print("Already logged in via saved cookies!")
                 return True
-            
+
+            # Fallback: treat non-login INET dashboard URLs as authenticated
+            if "inet.indsci.com/Dashboard" in final_url:
+                print("Already logged in via saved cookies!")
+                return True
+
+            print("Not logged in - redirected to authentication")
+            return False
+
     except Exception as e:
         print(f"Error checking login status: {e}")
         return False
@@ -416,11 +560,8 @@ async def inet_login_and_save(username: str = None, password: str = None):
     username = username or "dashboard_user"
     password = password or "900_Second!"
     
-    # INET login configuration
-    login_url = "https://inet.indsci.com/Login.aspx"
-    username_field = "ctl00$cph1$main$Login1$UserName"
-    password_field = "ctl00$cph1$main$Login1$Password"
-    submit_button = "ctl00$cph1$main$Login1$LoginButton"
+    # INET login configuration (SecureAuth OAuth via Login.aspx redirect)
+    login_url = INET_LOGIN_URL
     
     # Initialize the scraper with cookie persistence and credentials
     async with WebScraperAsync(
@@ -428,9 +569,6 @@ async def inet_login_and_save(username: str = None, password: str = None):
         username=username,
         password=password,
         login_url=login_url,
-        username_field=username_field,
-        password_field=password_field,
-        submit_button=submit_button
     ) as scraper:
         try:
             print("INET Login Scraper with Cookie Persistence (Async Version)")
@@ -517,20 +655,14 @@ async def scrape_table(url: str,
     username = username or "dashboard_user"
     password = password or "900_Second!"
     
-    # INET login configuration
-    login_url = "https://inet.indsci.com/Login.aspx"
-    username_field = "ctl00$cph1$main$Login1$UserName"
-    password_field = "ctl00$cph1$main$Login1$Password"
-    submit_button = "ctl00$cph1$main$Login1$LoginButton"
+    # INET login configuration (SecureAuth OAuth via Login.aspx redirect)
+    login_url = INET_LOGIN_URL
     
     async with WebScraperAsync(
         cookie_file="inet_cookies.pkl",
         username=username,
         password=password,
         login_url=login_url,
-        username_field=username_field,
-        password_field=password_field,
-        submit_button=submit_button
     ) as scraper:
         try:
             # Check if we're already logged in

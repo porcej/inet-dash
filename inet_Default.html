@@ -1,0 +1,104 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="csp-nonce" content="">
+    <title> Log in </title>
+
+    <script src="https://assets.cdn.connect.secureauth.com/f215dd7/static/utils.js" nonce=""></script>
+    <script src="https://assets.cdn.connect.secureauth.com/f215dd7/static/zxcvbn.js" nonce=""></script>
+    <script src="https://assets.cdn.connect.secureauth.com/f215dd7/static/qrcode.min.js" nonce=""></script>
+    <link href="https://assets.cdn.connect.secureauth.com/f215dd7/static/fonts.css" rel="stylesheet" nonce="">
+    <link href="https://assets.cdn.connect.secureauth.com/f215dd7/static/material-icons.css" rel="stylesheet" nonce="">
+    <link rel="stylesheet" href="https://assets.cdn.connect.secureauth.com/f215dd7/static/style.css" nonce="">
+    <link rel="stylesheet" href="https://assets.cdn.connect.secureauth.com/f215dd7/static/style-v2.css" nonce="">
+    <link rel="icon" href="https://assets.cdn.connect.secureauth.com/f215dd7/favicon.svg" type="image/svg+xml" nonce="">
+    <link rel="icon" href="https://assets.cdn.connect.secureauth.com/f215dd7/favicon.png" type="image/png" nonce="">
+    <script src="https://www.google.com/recaptcha/api.js" nonce="" async defer></script>
+
+    
+      <style nonce="">
+        :root {
+          
+
+          
+
+          
+        }
+
+        
+
+        
+      </style>
+    
+
+  </head>
+  <body>
+    <script nonce="">
+      
+      document.documentElement.classList.add('fonts-loading');
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(function() {
+          document.documentElement.classList.remove('fonts-loading');
+        });
+      } else {
+        
+        setTimeout(function() {
+          document.documentElement.classList.remove('fonts-loading');
+        }, 100);
+      }
+    </script>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <main>
+      
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="spinner"></div>
+  </div>
+
+  <script src="/dbfp/bfp7.js" defer></script>
+
+  <script nonce="">
+    const baseURL = `${window.location.protocol}//${window.location.host}`;
+    const startTime = performance.now();
+
+    function redirect(status, duration) {
+      const redirectURL = new URL(decodeURI("\/indsci-us\/indsci-us\/oauth2\/authorize?client_id=a07d387a70a94aa3921324eb9174c864\u0026code_challenge=bWnefTEeqmRiWDZ7SXLT65GIV2hZWz5XYA1mRWTbovU\u0026code_challenge_method=S256\u0026login_id=688f8e98cfc745e1b2c119c77a04e15b\u0026nonce=639187773500110629.ZDBhNDU0ZDktZTE1Ni00ZmMyLWEyNjgtNzkwMmJiYTEzMzc5Y2FkMGVmMzAtNGJmMy00MzdmLTg5MDEtOTE3ZDNkZjI2ZmQ5\u0026redirect_uri=https%3A%2F%2Finet.indsci.com%2FDashboard%2Fdefault.aspx\u0026response_mode=form_post\u0026response_type=code\u0026scope=openid\u002bprofile\u002bemail\u002boffline_access\u0026state=OpenIdConnect.AuthenticationProperties%3DbuBfVn1f_iLeweRpgDM6AgDJJQGEbOCkxVO5VC0LWs1BWvWaUe-HrqpOf9zWYfhXEA3ZExJWADJDTbdLK0qGkJZUhlSU6TAML8IkKqnMSPALHEuC2NGQFTVpzlgJVmYF-ir_9_K8zsU0xSylz9TT10xfsa_T1yj_TGP4_gKgL92Ub97P2cPQNbeU3p0vUbFxaUI6bK8ALNVLIeU0V1jz-ZDzmCCGU7_U7jFsGH5kNkieaa5aPMSXl-CJ-XZHXlEOXpKpmIaaXC97ibqnTFiLF4uo6PRJ4wJVDRb344eoaEtIXA7fvLX6yKb4apfGvN5TdV-y7Fq0UZgg0_erwRBEdmc3bmE\u0026x-client-SKU=ID_NET461\u0026x-client-ver=5.7.0.0"), baseURL);
+      redirectURL.searchParams.set('dbfp', status);
+      redirectURL.searchParams.set('duration', Math.round(duration));
+      window.location.href = redirectURL.toString();
+    }
+
+    const dbfpTimeout = setTimeout(() => {
+      const duration = performance.now() - startTime;
+      console.log("dbfp timeout");
+      redirect('failure', duration);
+    },  5000 );
+
+    document.addEventListener('DOMContentLoaded', () => {
+      SecureAuth.getFingerprint({
+        enableGps: false,
+        jwtEnabled: true,
+        apiEndpoint: "dbfp/data/fingerprint",
+        mode: "default",
+      });
+      document.addEventListener('onBfpDataLoad', (e) => {
+        const duration = performance.now() - startTime;
+        console.log("loaded dbfp");
+        clearTimeout(dbfpTimeout);
+        redirect('success', duration);
+      });
+    });
+  </script>
+
+    </main>
+  </body>
+</html>
+
+
+
+
+
