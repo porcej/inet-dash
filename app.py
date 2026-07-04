@@ -73,7 +73,9 @@ def load_config():
         'admin_password_hash': generate_password_hash('admin'),
         'inet_username': '',
         'inet_password': '',
-        'update_frequency': 60  # minutes
+        'update_frequency': 60,  # minutes
+        'calibration_due_soon_days': 170,
+        'calibration_overdue_days': 180,
     }
     
     try:
@@ -142,57 +144,65 @@ def scrape_equipment():
         return None
 
 
+def parse_equipment_datetime(date_str):
+    """Parse INET date/time strings into a datetime object."""
+    if not date_str:
+        return None
+
+    date_str = date_str.strip()
+    formats = [
+        '%m/%d/%Y %I:%M %p',  # 10/29/2025 2:00 AM
+        '%m/%d/%Y %H:%M',     # 10/29/2025 14:00
+        '%m/%d/%Y',           # 10/29/2025
+        '%Y-%m-%d %H:%M:%S',  # 2025-10-29 14:00:00
+        '%Y-%m-%d %H:%M',     # 2025-10-29 14:00
+        '%Y-%m-%d',           # 2025-10-29
+        '%d/%m/%Y %I:%M %p',  # 29/10/2025 2:00 AM
+        '%d/%m/%Y',           # 29/10/2025
+        '%m-%d-%Y',           # 10-29-2025
+    ]
+
+    for fmt in formats:
+        try:
+            return datetime.strptime(date_str, fmt)
+        except ValueError:
+            continue
+
+    return None
+
+
+def apply_calibration_status(item, due_soon_days, overdue_days):
+    """Set calibration status fields based on days since last calibration."""
+    item['_days_since_calibration'] = None
+    item['_calibration_status'] = 'ok'
+
+    last_cal = parse_equipment_datetime(item.get('Last Calibration Time', ''))
+    if not last_cal:
+        return
+
+    days_since = (datetime.now() - last_cal).days
+    item['_days_since_calibration'] = days_since
+
+    if days_since >= overdue_days:
+        item['_calibration_status'] = 'danger'
+    elif days_since >= due_soon_days:
+        item['_calibration_status'] = 'warning'
+
+
 def categorize_equipment(equipment_list):
     """Categorize equipment into instruments and docking stations"""
     instruments = []
     docking_stations = []
+    config = load_config()
+    due_soon_days = config.get('calibration_due_soon_days', 170)
+    overdue_days = config.get('calibration_overdue_days', 180)
     
     if not equipment_list:
         return instruments, docking_stations
     
     for item in equipment_list:
         category = item.get('Category', '').strip()
-        
-        # Add date parsing for calibration highlighting
-        item['_days_until_calibration'] = None
-        item['_calibration_status'] = 'ok'  # ok, warning, danger
-        
-        if 'Next Calibration Date' in item and item['Next Calibration Date']:
-            try:
-                # Try to parse the date (format may vary)
-                date_str = item['Next Calibration Date'].strip()
-                # Common formats including datetime with time components
-                formats = [
-                    '%m/%d/%Y %I:%M %p',  # 10/29/2025 2:00 AM
-                    '%m/%d/%Y %H:%M',     # 10/29/2025 14:00
-                    '%m/%d/%Y',           # 10/29/2025
-                    '%Y-%m-%d %H:%M:%S',  # 2025-10-29 14:00:00
-                    '%Y-%m-%d %H:%M',     # 2025-10-29 14:00
-                    '%Y-%m-%d',           # 2025-10-29
-                    '%d/%m/%Y %I:%M %p',  # 29/10/2025 2:00 AM
-                    '%d/%m/%Y',           # 29/10/2025
-                    '%m-%d-%Y',           # 10-29-2025
-                ]
-                
-                for fmt in formats:
-                    try:
-                        cal_date = datetime.strptime(date_str, fmt)
-                        today = datetime.now()
-                        days_diff = (cal_date - today).days
-                        item['_days_until_calibration'] = days_diff
-                        
-                        if days_diff < 0:  # Past due
-                            item['_calibration_status'] = 'danger'
-                        elif days_diff <= 10:  # Within 10 days
-                            item['_calibration_status'] = 'warning'
-                        else:
-                            item['_calibration_status'] = 'ok'
-                        break
-                    except ValueError:
-                        continue
-            except Exception as e:
-                print(f"Error parsing date '{date_str}': {e}")
-        
+        apply_calibration_status(item, due_soon_days, overdue_days)
         if category.lower() == 'instrument':
             instruments.append(item)
         elif category.lower() == 'docking station':
@@ -214,6 +224,28 @@ def categorize_equipment(equipment_list):
             station['_docked_unit'] = None
     
     return instruments, docking_stations
+
+
+def recategorize_equipment_data():
+    """Reapply calibration thresholds to the current in-memory equipment data."""
+    global equipment_data
+
+    with data_lock:
+        all_items = equipment_data['instruments'] + equipment_data['docking_stations']
+        if not all_items:
+            return False
+
+        instruments, docking_stations = categorize_equipment(all_items)
+        equipment_data['instruments'] = instruments
+        equipment_data['docking_stations'] = docking_stations
+        payload = equipment_data.copy()
+
+    socketio.emit('equipment_update', {
+        'instruments': payload['instruments'],
+        'docking_stations': payload['docking_stations'],
+        'last_update': payload['last_update']
+    }, namespace='/')
+    return True
 
 
 def update_equipment_data():
@@ -336,12 +368,28 @@ def admin():
         except ValueError:
             flash('Invalid update frequency', 'danger')
             return redirect(url_for('admin'))
+
+        try:
+            due_soon_days = int(request.form.get('calibration_due_soon_days', 170))
+            overdue_days = int(request.form.get('calibration_overdue_days', 180))
+            if due_soon_days < 1 or overdue_days < 1:
+                raise ValueError
+            if overdue_days < due_soon_days:
+                flash('Overdue days must be greater than or equal to due soon days', 'danger')
+                return redirect(url_for('admin'))
+            config['calibration_due_soon_days'] = due_soon_days
+            config['calibration_overdue_days'] = overdue_days
+        except ValueError:
+            flash('Invalid calibration alert settings', 'danger')
+            return redirect(url_for('admin'))
         
         if save_config(config):
             flash('Configuration saved successfully!', 'success')
             
             # Reschedule updates with new frequency
             schedule_updates()
+
+            recategorize_equipment_data()
             
             # Trigger immediate update if credentials changed
             if request.form.get('inet_username') or request.form.get('inet_password'):

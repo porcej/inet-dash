@@ -113,6 +113,45 @@
                                 </div>
                             </div>
 
+                            <!-- Calibration Alerts Section -->
+                            <h6 class="border-bottom pb-2 mb-3 mt-4">
+                                <i class="bi bi-calendar-check"></i> Calibration Alerts
+                            </h6>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="calibration_due_soon_days" class="form-label">
+                                        Due Soon (days since last calibration)
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-exclamation-circle"></i></span>
+                                        <input type="number" class="form-control" id="calibration_due_soon_days"
+                                               name="calibration_due_soon_days"
+                                               value="{{ config.calibration_due_soon_days }}" min="1" required>
+                                        <span class="input-group-text">days</span>
+                                    </div>
+                                    <div class="form-text">
+                                        Mark instruments as due soon after this many days since last calibration
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="calibration_overdue_days" class="form-label">
+                                        Overdue (days since last calibration)
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-exclamation-triangle"></i></span>
+                                        <input type="number" class="form-control" id="calibration_overdue_days"
+                                               name="calibration_overdue_days"
+                                               value="{{ config.calibration_overdue_days }}" min="1" required>
+                                        <span class="input-group-text">days</span>
+                                    </div>
+                                    <div class="form-text">
+                                        Mark instruments as overdue after this many days since last calibration
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Submit Buttons -->
                             <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
                                 <button type="button" class="btn btn-info" id="test-connection">
@@ -148,6 +187,10 @@
                                     {% else %}
                                         <span class="badge bg-danger"><i class="bi bi-x-circle"></i> No</span>
                                     {% endif %}
+                                </p>
+                                <p><strong>Calibration Alerts:</strong>
+                                    Due soon at {{ config.calibration_due_soon_days }} days,
+                                    overdue at {{ config.calibration_overdue_days }} days
                                 </p>
                             </div>
                         </div>

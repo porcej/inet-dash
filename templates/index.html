@@ -190,7 +190,7 @@
                                         <th>Upgrade</th>
                                         <th>Last Calibration Time</th>
                                         <th>Next Calibration Date</th>
-                                        <th>Days Remaining</th>
+                                        <th>Days Since Cal</th>
                                         <th>Status</th>
                                     </tr>
                                 </thead>
@@ -216,8 +216,8 @@
                                             <td>{{ instrument.get('Last Calibration Time', 'N/A') }}</td>
                                             <td>{{ instrument.get('Next Calibration Date', 'N/A') }}</td>
                                             <td>
-                                                {% if instrument._days_until_calibration is not none %}
-                                                    {{ instrument._days_until_calibration }} days
+                                                {% if instrument._days_since_calibration is not none %}
+                                                    {{ instrument._days_since_calibration }} days
                                                 {% else %}
                                                     N/A
                                                 {% endif %}

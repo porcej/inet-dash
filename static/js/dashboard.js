@@ -93,8 +93,8 @@ function updateInstrumentsTable(instruments) {
     instruments.forEach(instrument => {
         const rowClass = getRowClass(instrument._calibration_status);
         const statusBadge = getStatusBadge(instrument._calibration_status);
-        const daysRemaining = instrument._days_until_calibration !== null 
-            ? `${instrument._days_until_calibration} days` 
+        const daysSinceCalibration = instrument._days_since_calibration !== null
+            ? `${instrument._days_since_calibration} days`
             : 'N/A';
         const upgradeIcon = getUpgradeIcon(instrument['Upgrade Available']);
         
@@ -106,7 +106,7 @@ function updateInstrumentsTable(instruments) {
                 <td class="text-center">${upgradeIcon}</td>
                 <td>${escapeHtml(instrument['Last Calibration Time'] || 'N/A')}</td>
                 <td>${escapeHtml(instrument['Next Calibration Date'] || 'N/A')}</td>
-                <td>${daysRemaining}</td>
+                <td>${daysSinceCalibration}</td>
                 <td>${statusBadge}</td>
             </tr>
         `;
