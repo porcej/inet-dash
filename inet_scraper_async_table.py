@@ -79,7 +79,11 @@ def _is_login_page(html: str, url: str) -> bool:
     if title_text in {"log in", "login"}:
         return True
 
-    return "Login.aspx" in url or "/login" in url.lower()
+    path = urlparse(url).path.lower()
+    # Match the login page itself. "WinLogin.aspx" also contains "Login.aspx"
+    # and is the post-auth callback, so a substring check treats a successful
+    # login as a failure.
+    return path.endswith("/login.aspx") or path.endswith("/login")
 
 
 class WebScraperAsync:
@@ -605,7 +609,7 @@ async def inet_login_and_save(username: str = None, password: str = None):
                 print(f"Dashboard landing page saved to {filename}")
             
             # Navigate to and save the Equipment List page
-            equipment_list_url = "https://inet.indsci.com/Dashboard/EquipmentList.aspx"
+            equipment_list_url = "https://inet.indsci.com/Dashboard/EquipmentList.aspx?mode=All"
             print(f"\nNavigating to Equipment List: {equipment_list_url}")
             
             if await scraper.save_page("inet_equipment_list.html", equipment_list_url):
@@ -760,7 +764,7 @@ async def scrape_equipment_list(username: str = None, password: str = None):
         username: Username for INET login (if None, uses default)
         password: Password for INET login (if None, uses default)
     """
-    equipment_list_url = "https://inet.indsci.com/Dashboard/EquipmentList.aspx"
+    equipment_list_url = "https://inet.indsci.com/Dashboard/EquipmentList.aspx?mode=All"
     
     print("INET Equipment List Scraper (Async Version)")
     print("=" * 50)

@@ -84,13 +84,16 @@
                             </div>
                             
                             <div class="mb-3">
-                                <label for="inet_password" class="form-label">INET Password</label>
+                                <label for="inet_password" class="form-label">
+                                    INET Password
+                                    <small class="text-muted">(leave blank to keep current)</small>
+                                </label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                                    <input type="password" class="form-control" id="inet_password" name="inet_password" 
-                                           value="{{ config.inet_password }}" required>
+                                    <input type="password" class="form-control" id="inet_password" name="inet_password"
+                                           placeholder="Enter a new password" autocomplete="new-password">
                                 </div>
-                                <div class="form-text">Your INET account password</div>
+                                <div class="form-text">Leave blank to keep the current INET password</div>
                             </div>
 
                             <!-- Update Frequency Section -->

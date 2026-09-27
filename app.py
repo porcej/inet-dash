@@ -163,7 +163,7 @@ async def scrape_equipment_async():
     try:
         from inet_scraper_async_table import scrape_table
         
-        equipment_list_url = "https://inet.indsci.com/Dashboard/EquipmentList.aspx"
+        equipment_list_url = "https://inet.indsci.com/Dashboard/EquipmentList.aspx?mode=All"
         results = await scrape_table(
             equipment_list_url,
             username=config.get('inet_username'),
@@ -403,9 +403,13 @@ def admin():
         if new_admin_password:
             config['admin_password_hash'] = generate_password_hash(new_admin_password)
         
-        # Update INET credentials
+        # Update INET credentials. A blank password keeps the stored one.
+        # The admin form used to resubmit the "********" mask and overwrite
+        # the real password, which then made every scrape fail.
         config['inet_username'] = request.form.get('inet_username', '')
-        config['inet_password'] = request.form.get('inet_password', '')
+        inet_password = request.form.get('inet_password', '')
+        if inet_password and set(inet_password) != {'*'}:
+            config['inet_password'] = inet_password
         
         # Update frequency
         try:
